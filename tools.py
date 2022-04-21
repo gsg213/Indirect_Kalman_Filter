@@ -24,12 +24,12 @@ def quaternionmul(p,q):
     p2 = p[2]
     p3 = p[3]
 
-    M = np.vstack( [p0 , -p1 , -p2 , -p3], 
-                   [p1 , p0 , -p3 , p2 ],
-                   [p2 , p3 , p0, -p1 ],
-                   [p3 , -p2, p1 , p0])
+    M = np.vstack((np.hstack((p0 , -p1 , -p2 , -p3)), 
+                   np.hstack((p1 , p0 , -p3 , p2 )),
+                   np.hstack((p2 , p3 , p0, -p1)),
+                   np.hstack((p3 , -p2, p1 , p0))))
 
-    v = np.vstack(q[0] , q[1] , q[2]  ,q[3])
+    v = np.vstack((q[0] , q[1] , q[2]  ,q[3]))
 
     r = M * v
 
@@ -44,9 +44,9 @@ def dcm2quaternion(C):
     f[3] = 0.25 * (C[2,2] - C[1,1] - C[0,0] + 1)
 
     maxf = max(f)
-    index = f.index(maxf)
+    index = np.where(f == maxf)
 
-    q = np.zeros(4,1)
+    q = np.zeros((4,1))
     if index == 1:
         q[0] = math.sqrt(f[0])
         q[1] = (C[1,2] - C[2,1]) / (4*q[0])
@@ -68,14 +68,14 @@ def dcm2quaternion(C):
         q[1] = (C[0,2] + C[2,0]) / (4*q[3])
         q[2] = (C[1,2] + C[2,1]) / (4*q[3])
     
-    return q
+    return q.reshape(q.shape[0])
 
 
 def vec2product(v):
 
-    M = [[0, -v[3], v[2]],
-         [v[3], 0, -v[1]],
-         [-v[2], v[1], 0]]
+    M = np.vstack((np.hstack((0, -v[3], v[2])),
+                   np.hstack((v[3], 0, -v[1])),
+                   np.hstack((-v[2], v[1], 0))))
     
     return M
 
@@ -86,9 +86,10 @@ def quaternion2dcm(q):
     q2 = q[2]
     q3 = q[3]
 
-    M = [[2*q0^2 + 2*q1^2 - 1, 2*q1*q2 + 2*q0*q3, 2*q1*q3-2*q0*q2],
-         [2*q1*q2 - 2*q0*q3, 2*q0^2 + 2*q2^2 - 1, 2*q2*q3 + 2*q0*q1],
-         [2*q1*q3+2*q0*q2, 2*q2*q3-2*q0*q1, 2*q0^2+2*q3^2-1]]
+    M = np.vstack((np.hstack((2*q0^2 + 2*q1^2 - 1, 2*q1*q2 + 2*q0*q3, 2*q1*q3-2*q0*q2)),
+                   np.hstack((2*q1*q2 - 2*q0*q3, 2*q0^2 + 2*q2^2 - 1, 2*q2*q3 + 2*q0*q1)),
+                   np.hstack((2*q1*q3+2*q0*q2, 2*q2*q3-2*q0*q1, 2*q0^2+2*q3^2-1))
+                  ))
 
     return M
     
@@ -112,9 +113,9 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
     g_tild = np.array([[0],[0],[g]])
 
     alpha = 50*D2R
-    m_tild =  np.vstack(math.cos(alpha),
+    m_tild =  np.vstack((math.cos(alpha),
                        0, 
-                       -math.sin(alpha))
+                       -math.sin(alpha)))
 
     Q_b_g = 0.000001*np.eye(3)
     Q_b_a = 0.000001*np.eye(3)
@@ -140,7 +141,10 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
     ymbar = ym[:,0] / np.linalg.norm(ym[:,0])
 
     foo1 = np.cross(yabar,ymbar) / np.linalg.norm( np.cross(yabar,ymbar) )
-    C = np.hstack(-np.cross(yabar,foo1)  , foo1 , yabar)
+
+    yabar_ = yabar.reshape(yabar.shape[0],1)
+    foo1_ = foo1.reshape(foo1.shape[0],1)
+    C = np.hstack((-np.cross(yabar,foo1).reshape(foo1.shape[0],1)  , foo1_ , yabar_))
     q4[:,0] = dcm2quaternion(C)
 
     # Kalman filter state
@@ -153,10 +157,11 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
     wx = yg[0,0]
     wy = yg[1,0]
     wz = yg[2,0]
-    omega = [[0,-wx, -wy, -wz],
-             [wx, 0, wz, -wy],
-             [wy, -wz, 0, wx],
-             [wz, wy, -wx, 0]]
+    omega = np.vstack((np.hstack((0,-wx, -wy, -wz)),
+                       np.hstack((wx, 0, wz, -wy)),
+                       np.hstack((wy, -wz, 0, wx)),
+                       np.hstack((wz, wy, -wx, 0))
+                       ))
 
     # variable used in the adaptive algorithm      
     r2count = 100
@@ -189,10 +194,10 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
         wy = yg[1,i]
         wz = yg[2,i]
         w = [[wx],[wy],[wz]]
-        omega = np.vstack([0,-wx, -wy, -wz],
-                          [wx, 0, wz, -wy],
-                          [wy, -wz, 0, wx],
-                          [wz, wy, -wx, 0])
+        omega = np.vstack((np.hstack((0,-wx, -wy, -wz)),
+                           np.hstack((wx, 0, wz, -wy)),
+                           np.hstack((wy, -wz, 0, wx)),
+                           np.hstack((wz, wy, -wx, 0))))
         
         q4[:,i] =  (np.eye(4) + (3/4)*omega*T  - (1/4)*omega_*T \
                     - (1/6)*((np.linalg.norm(w,2))^2)*(T^2)*np.eye(4) \
@@ -228,9 +233,9 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
 
         lambda_ = [s[0], s[1], s[2]]
 
-        mu =  [ np.transpose(u1) * fooR2 * u1 , 
-                np.transpose(u2) * fooR2 * u2 , 
-                np.transpose(u3) * fooR2 * u3]
+        mu =  np.hstack(( np.transpose(u1) * fooR2 * u1 , 
+                          np.transpose(u2) * fooR2 * u2 , 
+                          np.transpose(u3) * fooR2 * u3))
 
         if max(lambda_ - mu) > gamma :
             r2count = 0
@@ -254,7 +259,7 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
                + K_a*(Ra + Qstar)*np.transpose(K_a)
 
         
-        qe = np.vstack(1,xhat_a[0:2])
+        qe = np.vstack((1,xhat_a[0:2]))
         
         q4[:,i] = quaternionmul(q4[:,i],qe)
         
@@ -268,15 +273,16 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
         
         z_m = ym[:,i-1] - Cq*m_tild
         
-        P_m =  np.vstack(np.hstack(P_a[0:2,0.2], np.zeros((3,6))),
-                         np.hstack(np.zeros((6,3)), np.zeros((6,6))))
+        P_m =  np.vstack((np.hstack((P_a[0:2,0.2], np.zeros((3,6)))),
+                         np.hstack((np.zeros((6,3)), np.zeros((6,6))))
+                         ))
         
-        r3 = Cq * np.vstack(0,0,1)
+        r3 = Cq * np.vstack((0,0,1))
 
 
-        K_m = np.vstack(np.hstack(r3*np.transpose(r3), np.zeros((3,6))), 
-                        np.hstack(np.zeros((6,3)), np.zeros((6,6))))\
-              *P_m*np.transpose(H_m)/(H_m*P_m*np.transpose(H_m)+Rm)
+        K_m = np.vstack((np.hstack((r3*np.transpose(r3), np.zeros((3,6)))), 
+                        np.hstack((np.zeros((6,3)), np.zeros((6,6))))\
+              *P_m*np.transpose(H_m)/(H_m*P_m*np.transpose(H_m)+Rm)))
 
         x = xhat_a + K_m*(z_m-H_m*xhat_a)
         
@@ -290,7 +296,7 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
         bahat = bahat + x[6:8]
         x[6:8] = np.zeros((3,1))
 
-        qe = np.vstack(1,xhat_a[0:2])
+        qe = np.vstack((1,xhat_a[0:2]))
         
         q4[:,i] = quaternionmul(q4[:,i],qe)
         
