@@ -112,9 +112,9 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
     g_tild = np.array([[0],[0],[g]])
 
     alpha = 50*D2R
-    m_tild = np.array([[math.cos(alpha)],
-                       [0], 
-                       [-math.sin(alpha)]])
+    m_tild =  np.vstack(math.cos(alpha),
+                       0, 
+                       -math.sin(alpha))
 
     Q_b_g = 0.000001*np.eye(3)
     Q_b_a = 0.000001*np.eye(3)
@@ -140,15 +140,12 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
     ymbar = ym[:,0] / np.linalg.norm(ym[:,0])
 
     foo1 = np.cross(yabar,ymbar) / np.linalg.norm( np.cross(yabar,ymbar) )
-    C = np.hstack((-np.cross(yabar,foo1)  , foo1 , yabar))
+    C = np.hstack(-np.cross(yabar,foo1)  , foo1 , yabar)
     q4[:,0] = dcm2quaternion(C)
 
     # Kalman filter state
-    x = np.zeros(9,1)
+    x = np.zeros((9,1))
 
-    # np.vstack((np.hstack(()),
-    #           np.hstack(()),
-    #           np.hastck(())))
     P = np.vstack((np.hstack((0.01*np.eye(3), np.zeros((3,6)))),
                    np.hstack((np.zeros((3,3)),0.000001*np.eye(3),np.zeros((3,3)))),
                    np.hstack((np.zeros((3,6)),0.000001*np.eye(3)))))
@@ -192,10 +189,10 @@ def Compute_Attitude(yg,ya,ym,tt,Rg,Ra,Rm):
         wy = yg[1,i]
         wz = yg[2,i]
         w = [[wx],[wy],[wz]]
-        omega = [[0,-wx, -wy, -wz],
-                 [wx, 0, wz, -wy],
-                 [wy, -wz, 0, wx],
-                 [wz, wy, -wx, 0]]
+        omega = np.vstack([0,-wx, -wy, -wz],
+                          [wx, 0, wz, -wy],
+                          [wy, -wz, 0, wx],
+                          [wz, wy, -wx, 0])
         
         q4[:,i] =  (np.eye(4) + (3/4)*omega*T  - (1/4)*omega_*T \
                     - (1/6)*((np.linalg.norm(w,2))^2)*(T^2)*np.eye(4) \
